@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>English Special Dictionary</title>
+<style>
+    body {
+        background-image: url('/storage/emulated/0/Pictures/Gallery/owner/االبل/IMG_٢٠٢٤٠٨٠٥_٢٣٣٨١٦.jpg');
+       height:1480px;
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+    }
+    table {
+        width: 50%;
+        margin: 2px auto;
+        border-collapse: collapse;
+    }
+    th, td {
+        border: 1px solid black;
+        padding: 8px;
+        text-align: center;
+        white-space: nowrap; /* إضافة الخاصية هنا */
+    }
+    .deleteButton {
+        background-color: red;
+        color: white   ;
+        border: none;
+        padding: 5px 10px;
+        cursor: pointer;
+    }
+</style>
+</head>
+<body>
+
+<label for="textColor">اختر لون النص: </label>
+<input type="color" id="textColor" class="colorPicker" onchange="changeTextColor()">
+
+<div style="text-align: center; margin: 20px;">
+    <input type="text" id="searchInput" placeholder="بحث عن كلمة..." oninput="searchWords()">
+    <button onclick="sortWords(0)">فرز حسب الكلمة</button>
+    <button onclick="sortWords(1)">فرز حسب الترجمة</button>
+    <button onclick="sortWords(2)">فرز حسب الملاحظة</button>
+</div>
+
+<script>
+function changeTextColor() {
+    var colorPicker = document.getElementById("textColor");
+    var selectedColor = colorPicker.value;
+    
+    var tableCells = document.querySelectorAll("th, td");
+    tableCells.forEach(function(cell) {
+        cell.style.color = selectedColor;
+    });
+}
+</script>
+
+<table id="wordsTable">
+    <tr>
+        <th>الكلمة</th>
+        <th>الترجمة</th>
+        <th>ملاحظة</th>
+        <th>حذف</th>
+    </tr>
+</table>
+
+<button onclick="addRow()">إضافة صف جديد</button>
+
+<script>
+var data = []; // مصفوفة لتخزين البيانات
+
+function addRow() {
+    var table = document.getElementById("wordsTable");
+    var newRow = table.insertRow(-1); // Insert new row at the last position
+
+    var cell1 = newRow.insertCell(0);
+    cell1.contentEditable = true; // Make cell editable
+    var cell2 = newRow.insertCell(1);
+    cell2.contentEditable = true; // Make cell editable
+    var cell3 = newRow.insertCell(2);
+    cell3.contentEditable = true; // Make cell editable
+    var cell4 = newRow.insertCell(3);
+
+    cell4.innerHTML = '<button class="deleteButton" onclick="deleteRow(this)">حذف</button>';
+
+    // Add empty data to the array
+    data.push(["", "", ""]); 
+    saveData(); // Save data immediately after adding a new row
+}
+
+function saveData() {
+    localStorage.setItem('dictionaryData', JSON.stringify(data));
+}
+
+window.onload = function() {
+    if(localStorage.getItem('dictionaryData')) {
+        data = JSON.parse(localStorage.getItem('dictionaryData'));
+        data.forEach(function(row) {
+            addRowFromStorage(row);
+        });
+    }
+}
+
+function addRowFromStorage(rowData) {
+    var table = document.getElementById("wordsTable");
+    var newRow = table.insertRow(-1);
+
+    var cell1 = newRow.insertCell(0);
+    cell1.innerHTML = rowData[0];
+    cell1.contentEditable = true; // Make cell editable
+    var cell2 = newRow.insertCell(1);
+    cell2.innerHTML = rowData[1];
+    cell2.contentEditable = true; // Make cell editable
+    var cell3 = newRow.insertCell(2);
+    cell3.innerHTML = rowData[2];
+    cell3.contentEditable = true; // Make cell editable
+    var cell4 = newRow.insertCell(3);
+
+    cell4.innerHTML = '<button class="deleteButton" onclick="deleteRow(this)">حذف</button>';
+}
+
+function deleteRow(button) {
+    var row = button.parentNode.parentNode;
+    var rowIndex = row.rowIndex - 1;
+    data.splice(rowIndex, 1); // Remove data from the array
+    row.remove();
+    saveData(); // Save updated data
+}
+
+// تحديث البيانات عند التعديل
+document.addEventListener('input', function(event) {
+    if (event.target.closest('td')) {
+        var row = event.target.closest('tr');
+        var rowIndex = row.rowIndex - 1;
+        var cells = row.querySelectorAll('td');
+
+        data[rowIndex] = Array.from(cells).slice(0, 3).map(cell => cell.innerText);
+        saveData(); // Save updated data immediately
+        
+        // تحقق من التكرار بعد كل تعديل
+        checkForDuplicates();
+    }
+});
+
+// دالة البحث
+function searchWords() {
+    var input = document.getElementById('searchInput').value.toLowerCase();
+    var table = document.getElementById("wordsTable");
+    var rows = table.getElementsByTagName("tr");
+
+    for (var i = 1; i < rows.length; i++) {
+        var cells = rows[i].getElementsByTagName("td");
+        var found = false;
+
+        for (var j = 0; j < cells.length - 1; j++) { // -1 to avoid the delete button
+            if (cells[j].innerText.toLowerCase().includes(input)) {
+                found = true;
+                break;
+            }
+        }
+
+        rows[i].style.display = found ? "" : "none"; // Show or hide row
+    }
+}
+
+// دالة الفرز
+function sortWords(columnIndex) {
+    data.sort(function(a, b) {
+        if (a[columnIndex] < b[columnIndex]) return -1;
+        if (a[columnIndex] > b[columnIndex]) return 1;
+        return 0;
+    });
+
+    // إعادة بناء الجدول
+    var table = document.getElementById("wordsTable");
+    while (table.rows.length > 1) {
+        table.deleteRow(1);
+    }
+
+    data.forEach(function(row) {
+        addRowFromStorage(row);
+    });
+}
+
+// دالة للتحقق من التكرار
+function checkForDuplicates() {
+    var uniqueWords = new Set();
+    var duplicates = [];
+
+    data.forEach(function(row) {
+        var word = row[0].trim().toLowerCase();
+        if (word && uniqueWords.has(word)) {
+            duplicates.push(word);
+        } else {
+            uniqueWords.add(word);
+        }
+    });
+
+    if (duplicates.length > 0) {
+        alert('تحذير: الكلمات المكررة: ' + duplicates.join(', '));
+    }
+}
+</script>
+</body>
+</html>
